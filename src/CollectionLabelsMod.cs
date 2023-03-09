@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace CollectionLabels
 {
-	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", "1.0.0")]
+	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", "1.0.1")]
 	public class CollectionLabelsMod : BaseUnityPlugin
 	{
 		// A list of pearl names/locations. (E.g. "[Shoreline pearl 1]", "[Chimney Canopy pearl]", etc.)
@@ -71,13 +71,14 @@ namespace CollectionLabels
 			foreach (DataPearl.AbstractDataPearl.DataPearlType pearlType in self.usedPearlTypes)
 			{
 				// The region this pearl is found in. ("SL_moon" > "SL" > "Shoreline")
-				// (Unless it's the music pearl or a scug starting pearl, then it gets set manually.)
+				// (Some like the music pearl or scug starting pearls are set manually.)
 				string pearlName = pearlType.value switch
 				{
 					"RM" => "Music",
 					"Red_stomach" => "Hunter",
 					"Spearmasterpearl" => "Spearmaster",
 					"Rivulet_stomach" => "Rivulet",
+					"MS" => "Garbage Wastes", // Interestingly, this one seems to be mislabeled in the game's code. (It appears in GW, not MS)
 					_ => Region.GetRegionFullName(pearlType.value.Split('_')[0], null)
 				};
 
@@ -112,23 +113,28 @@ namespace CollectionLabels
 
 		private static List<string> FormatListDuplicates(List<string> inputList)
 		{
-			return inputList
-				.GroupBy(x => x) // Create groups of each distinct name.
-				.SelectMany(g => g.Select((name, index) =>
-				// Go through each item name in each group (and grab the index of the name too).
+			List<string> outputList = new();
+			foreach (string name in inputList)
+			{
+				// The number of times this entry name has occurs in `inputList`.
+				int inputListOccurrences = inputList.Count(x => x == name);
+				// The number of times an entry *containing* this name occurs in `outputList`. (The name is modified so just `==` won't work.)
+				int outputListOccurrences = outputList.Count(x => x.Contains(name));
+
+				// If there's more than 1 pearl/chatlog with this name, append a number onto the end.
+				// This changes ("[Shoreline pearl", "[Shoreline pearl") into ("[Shoreline pearl 1]", "[Shoreline pearl 2]")
+				if (inputListOccurrences > 1)
 				{
-					if (g.Count() > 1)
-					{
-						// If there's more than one of the same name, append index+1 to the end of it.
-						// This changes "[Shoreline pearl", "[Shoreline pearl" into "[Shoreline pearl 1]", "[Shoreline pearl 2]"
-						return $"{name} {index + 1}]";
-					}
-					else
-					{
-						// If there's only one instance of the name, just add the closing bracket.
-						return $"{name}]";
-					}
-				})).ToList();
+					outputList.Add($"{name} {outputListOccurrences + 1}]");
+				}
+				// Otherwise, just leave it as-is and add the closing bracket.
+				else
+				{
+					outputList.Add($"{name}]");
+				}
+			}
+
+			return outputList;
 		}
 
 		private void SingalHK(On.MoreSlugcats.CollectionsMenu.orig_Singal orig, CollectionsMenu self, MenuObject sender, string message)

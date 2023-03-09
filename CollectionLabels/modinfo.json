@@ -1,10 +1,10 @@
 {
 	"id": "sabreml.collectionlabels",
 	"name": "Collection Labels",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"target_game_version": "v1.9.06",
 	"authors": "SabreML",
-	"description": "Adds a name/location to each item in the Collections menu.<LINE>(Warning: May contain light spoilers for region names and collectibles!)",
+	"description": "Adds a name/location to each item in the Collections menu, for spoiler-free collectible hunting!",
 	"requirements": ["moreslugcats"],
 	"requirements_names": ["More Slugcats Expansion"],
 	"tags": ["Cosmetics"] 
