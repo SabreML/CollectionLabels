@@ -42,6 +42,15 @@ namespace CollectionLabels
 			{
 				LoadEntryNames(self);
 			}
+
+			foreach (SimpleButton button in self.pearlButtons.Concat(self.chatlogButtons))
+			{
+				if (button.GetButtonBehavior.greyedOut)
+				{
+					button.GetButtonBehavior.greyedOut = false;
+					button.inactive = true;
+				}
+			}
 		}
 
 		private void ShutDownProcessHK(On.MoreSlugcats.CollectionsMenu.orig_ShutDownProcess orig, CollectionsMenu self)
@@ -160,9 +169,6 @@ namespace CollectionLabels
 				// The singal message contains the chatlog's index in its respective list.
 				int chatlogIndex = int.Parse(message.Substring(message.LastIndexOf("_") + 1));
 
-				// Set the colour of the text to whatever the icon is using.
-
-				// Get the `ChatlogID` value from whichever list the chatlog is from, and set the label's text based on that.
 				if (message.Contains("POSTPEB"))
 				{
 					chatlogIndex += self.prePebsBroadcastChatlogs.Count;
@@ -171,8 +177,15 @@ namespace CollectionLabels
 				{
 					chatlogIndex += self.prePebsBroadcastChatlogs.Count + self.postPebsBroadcastChatlogs.Count;
 				}
-				entryNameLabel.label.color = self.chatlogSprites[chatlogIndex].color;
+				entryNameLabel.label.color = sender.inactive ? Color.grey : self.chatlogSprites[chatlogIndex].color;
 				entryNameLabel.text = chatlogEntryNames[chatlogIndex];
+			}
+
+			if (sender.inactive)
+			{
+				self.ResetLabels();
+				self.labels[0].text = self.Translate("[ Collection Empty ]");
+				self.RefreshLabelPositions();
 			}
 		}
 	}
