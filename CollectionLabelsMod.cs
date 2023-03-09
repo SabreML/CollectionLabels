@@ -71,9 +71,10 @@ namespace CollectionLabels
 			foreach (DataPearl.AbstractDataPearl.DataPearlType pearlType in self.usedPearlTypes)
 			{
 				// The region this pearl is found in. ("SL_moon" > "SL" > "Shoreline")
-				// (Unless it's a campaign pearl inside a slugcat, then it gets set to their name.)
+				// (Unless it's the music pearl or a scug starting pearl, then it gets set manually.)
 				string pearlName = pearlType.value switch
 				{
+					"RM" => "Music",
 					"Red_stomach" => "Hunter",
 					"Spearmasterpearl" => "Spearmaster",
 					"Rivulet_stomach" => "Rivulet",

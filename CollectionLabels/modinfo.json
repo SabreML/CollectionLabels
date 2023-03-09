@@ -4,6 +4,8 @@
 	"version": "1.0.0",
 	"target_game_version": "v1.9.06",
 	"authors": "SabreML",
-	"description": "Placeholder",
+	"description": "Adds a name/location to each item in the Collections menu.<LINE>(Warning: May contain spoilers for region names and collectibles!)",
+	"requirements": ["moreslugcats"],
+	"requirements_names": ["More Slugcats Expansion"],
 	"tags": ["Cosmetics"] 
 }
