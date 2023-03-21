@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EA66FC5D-9931-4577-B022-A1A11858182C}"
 	ProjectSection(SolutionItems) = preProject
 		CollectionLabels\modinfo.json = CollectionLabels\modinfo.json
+		README.md = README.md
 	EndProjectSection
 EndProject
 Global
