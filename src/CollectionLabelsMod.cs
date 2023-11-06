@@ -15,6 +15,8 @@ namespace CollectionLabels
 	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", "1.0.1")]
 	public class CollectionLabelsMod : BaseUnityPlugin
 	{
+		private LinearChatlogTracker chatlogTracker;
+
 		// A list of pearl names/locations. (E.g. "[Shoreline pearl 1]", "[Chimney Canopy pearl]", etc.)
 		private List<string> pearlNames;
 		// A list of chatlog names/locations. (E.g. "[Sky Islands transmission 2]", "[Garbage Wastes transmission 1]", etc.)
@@ -55,6 +57,14 @@ namespace CollectionLabels
 					button.inactive = true;
 				}
 			}
+
+			// `is not` used here in order to check for null and assign a 'non-nullable' variable.
+			if (LinearChatlogTracker.TryCreateTracker() is not LinearChatlogTracker tracker)
+			{
+				Debug.Log("something something 'couldn't load so disabling fancy features'");// TODO
+				return;
+			}
+			chatlogTracker = tracker;
 		}
 
 		private void ShutDownProcessHK(On.MoreSlugcats.CollectionsMenu.orig_ShutDownProcess orig, CollectionsMenu self)
@@ -164,18 +174,7 @@ namespace CollectionLabels
 			// Chatlog button.
 			else if (message.Contains("CHATLOG"))
 			{
-				// The singal message contains the chatlog's index in its respective list.
-				int chatlogIndex = int.Parse(message.Substring(message.LastIndexOf("_") + 1));
-
-				if (message.Contains("POSTPEB"))
-				{
-					chatlogIndex += self.prePebsBroadcastChatlogs.Count;
-				}
-				else if (message.Contains("NORMAL"))
-				{
-					// TODO: Write a comment actually explaining why it's doing this index stuff.
-					chatlogIndex += self.prePebsBroadcastChatlogs.Count + self.postPebsBroadcastChatlogs.Count;
-				}
+				int chatlogIndex = self.chatlogButtons.IndexOf(sender);
 
 				// Set the text colour to grey if it isn't unlocked yet, or the colour of the button sprite if it is.
 				nameLabel.label.color = sender.inactive ? Color.grey : self.chatlogSprites[chatlogIndex].color;
