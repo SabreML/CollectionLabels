@@ -2,23 +2,28 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using UnityEngine;
+
+#nullable enable annotations
 
 namespace CollectionLabels
 {
-	public readonly struct LinearChatlogTracker
+	public class LinearChatlogTracker
 	{
-		public readonly Dictionary<string, List<ChatlogData.ChatlogID>> UncollectedChatlogs;
+		public static Dictionary<string, List<ChatlogData.ChatlogID>> AllChatlogs;
+		public static Dictionary<string, List<ChatlogData.ChatlogID>> UncollectedChatlogs;
 
-		public readonly bool PostPebbles;
+		public static bool PlayerIsPostPebbles;
 
 		private LinearChatlogTracker(DeathPersistentSaveData persistentSaveData, MiscWorldSaveData miscWorldSaveData)
 		{
-			PostPebbles = miscWorldSaveData.SSaiConversationsHad > 0;
+			PlayerIsPostPebbles = miscWorldSaveData.SSaiConversationsHad > 0;
 
 			string[] spearmasterRegions = SlugcatStats.getSlugcatStoryRegions(MoreSlugcatsEnums.SlugcatStatsName.Spear);
-			// Make a new dict based on `regionGreyTokens`, only with spearmaster regions, and with all 'unique' (coloured) chatlogs removed.
-			Dictionary<string, List<ChatlogData.ChatlogID>> regionLinearTokens = RWCustom.Custom.rainWorld.regionGreyTokens
-				.Where(pair => spearmasterRegions.Contains(pair.Key))
+
+			// Make a new dict based on `regionGreyTokens` with only the spearmaster regions, and with all 'unique' (coloured) chatlogs removed.
+			AllChatlogs = RWCustom.Custom.rainWorld.regionGreyTokens
+				.Where(pair => spearmasterRegions.Contains(pair.Key.ToUpper()))
 				.ToDictionary(
 					pair => pair.Key,
 					pair => pair.Value
@@ -26,27 +31,38 @@ namespace CollectionLabels
 						.ToList()
 				);
 
-			// Copy that dictionary to a new one with any chatlogs the player has already collected removed from it,
-			// so that only the uncollected entries remain.
-			UncollectedChatlogs = regionLinearTokens
-				.ToDictionary(
-					pair => pair.Key,
-					pair => pair.Value.Except(persistentSaveData.chatlogsRead).ToList()
-				);
+			// Copy that dictionary to a new one with any chatlogs that the player has collected removed from it,
+			// then filter out any region entries that have been emptied as a result, so that only the uncollected chatlogs remain.
+			UncollectedChatlogs = AllChatlogs
+				// Make a new `KeyValuePair` for each pair with any collected chatlogs filtered out of the `pair.Value` list.
+				// (`KeyValuePair.Value` is read-only so it can't just be filtered directly.)
+				.Select(pair => new KeyValuePair<string, List<ChatlogData.ChatlogID>>(
+					pair.Key,
+					pair.Value.Except(persistentSaveData.chatlogsRead).ToList()
+				))
+				// If any of the region token lists are empty now as a result of the `Except()`, filter them out.
+				.Where(pair => pair.Value.Count > 0)
+				// `IEnumerable` -> `Dictionary`.
+				.ToDictionary(pair => pair.Key, pair => pair.Value);
 		}
 
 		public static LinearChatlogTracker? TryCreateTracker()
 		{
+			Debug.Log("(CollectionLabels) Attempting to load Spearmaster save data...");
 			if (!TryLoadSaveData(out DeathPersistentSaveData deathPersistentSaveData, out MiscWorldSaveData miscWorldSaveData))
 			{
+				Debug.Log("(CollectionLabels) Load failed. :(");
 				return null;
 			}
-			// Just in case something's wrong with the token cache, since it sometimes needs to regenerate itself.
+			// Just in case something's wrong with the token cache, since it sometimes needs to be regenerated.
 			if (RWCustom.Custom.rainWorld.regionGreyTokens.Count == 0)
 			{
+				// Log to `exceptionLog.txt`, but don't actually throw an error.
+				Debug.LogException(new System.Exception("(CollectionLabels) Token cache error!"));
 				return null;
 			}
 
+			Debug.Log("(CollectionLabels) Success!");
 			return new LinearChatlogTracker(deathPersistentSaveData, miscWorldSaveData);
 		}
 

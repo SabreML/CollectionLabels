@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Permissions;
 using UnityEngine;
 
+#nullable enable annotations
 #pragma warning disable CS0618
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 #pragma warning restore CS0618
@@ -15,8 +16,6 @@ namespace CollectionLabels
 	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", "1.0.1")]
 	public class CollectionLabelsMod : BaseUnityPlugin
 	{
-		private LinearChatlogTracker chatlogTracker;
-
 		// A list of pearl names/locations. (E.g. "[Shoreline pearl 1]", "[Chimney Canopy pearl]", etc.)
 		private List<string> pearlNames;
 		// A list of chatlog names/locations. (E.g. "[Sky Islands transmission 2]", "[Garbage Wastes transmission 1]", etc.)
@@ -24,6 +23,10 @@ namespace CollectionLabels
 
 		// The label displaying the selected entry's name.
 		private MenuLabel nameLabel;
+
+		private ChatlogRegionList? chatlogRegionList;
+
+		private LinearChatlogTracker? linearChatlogTracker;
 
 		public void OnEnable()
 		{
@@ -37,8 +40,8 @@ namespace CollectionLabels
 			orig(self, manager);
 
 			// Add `nameLabel` to the menu.
-			float labelX = self.textBoxBorder.pos.x + self.textBoxBorder.size.x / 2f; // Centered horizontally.
-			float labelY = self.textBoxBorder.pos.y + self.textBoxBorder.size.y - 30f; // Near the top vertically.
+			float labelX = self.textBoxBorder.pos.x + (self.textBoxBorder.size.x / 2f); // Centered horizontally.
+			float labelY = self.textBoxBorder.pos.y + (self.textBoxBorder.size.y - 30f); // Near the top vertically.
 			nameLabel = new(self, self.pages[0], "", new Vector2(labelX, labelY), Vector2.zero, true);
 			self.pages[0].subObjects.Add(nameLabel);
 
@@ -52,26 +55,25 @@ namespace CollectionLabels
 				if (button.GetButtonBehavior.greyedOut)
 				{
 					// Switch the button from `greyedOut` to `inactive`.
-					// They both make the button greyed out, but `inactive` keeps it clickable too.
+					// They both make the button appear greyed out, but `inactive` keeps it clickable too.
 					button.GetButtonBehavior.greyedOut = false;
 					button.inactive = true;
 				}
 			}
 
-			// `is not` used here in order to check for null and assign a 'non-nullable' variable.
-			if (LinearChatlogTracker.TryCreateTracker() is not LinearChatlogTracker tracker)
+			linearChatlogTracker = LinearChatlogTracker.TryCreateTracker();
+			if (linearChatlogTracker == null)
 			{
-				Debug.Log("something something 'couldn't load so disabling fancy features'");// TODO
-				return;
+				Debug.Log("something something 'couldn't load so disabling region list'");// TODO
 			}
-			chatlogTracker = tracker;
 		}
 
 		private void ShutDownProcessHK(On.MoreSlugcats.CollectionsMenu.orig_ShutDownProcess orig, CollectionsMenu self)
 		{
 			orig(self);
-			// Clean up the name label when the menu closes.
+			// Clean up the UI elements when the menu closes.
 			nameLabel = null;
+			HideChatlogRegionList(self);
 		}
 
 		private void LoadPearlNames(CollectionsMenu self)
@@ -103,7 +105,7 @@ namespace CollectionLabels
 
 			for (int i = 0; i < self.prePebsBroadcastChatlogs.Count; i++)
 			{
-				chatlogNames.Add($"[Live broadcast (Pre-event)");
+				chatlogNames.Add("[Live broadcast (Pre-event)");
 			}
 			for (int i = 0; i < self.postPebsBroadcastChatlogs.Count; i++)
 			{
@@ -126,7 +128,7 @@ namespace CollectionLabels
 			List<string> outputList = new();
 			foreach (string name in inputList)
 			{
-				// The number of times this entry name has occurs in `inputList`.
+				// The number of times this entry name occurs in `inputList`.
 				int inputListOccurrences = inputList.Count(x => x == name);
 				// The number of times an entry *containing* this name occurs in `outputList`. (The name is modified so just `==` won't work.)
 				int outputListOccurrences = outputList.Count(x => x.Contains(name));
@@ -154,6 +156,9 @@ namespace CollectionLabels
 			// Pearl button or iterator button.
 			if (message.Contains("PEARL") || message.Contains("TYPE"))
 			{
+				// Remove the region list if it's there.
+				HideChatlogRegionList(self);
+
 				DataPearl.AbstractDataPearl.DataPearlType selectedPearl = self.usedPearlTypes[self.selectedPearlInd];
 
 				// Set the label's colour to the pearl's in-game colour (or highlight colour).
@@ -175,21 +180,71 @@ namespace CollectionLabels
 			else if (message.Contains("CHATLOG"))
 			{
 				int chatlogIndex = self.chatlogButtons.IndexOf(sender);
+				// The first `prePebsBroadcastChatlogs.Count + postPebsBroadcastChatlogs.Count` number of buttons are assigned
+				// to the grey/white broadcasts, so if the index is within that range it's one of them.
+				bool isLinearChatlog = chatlogIndex <= self.prePebsBroadcastChatlogs.Count + self.postPebsBroadcastChatlogs.Count;
 
-				// Set the text colour to grey if it isn't unlocked yet, or the colour of the button sprite if it is.
+				// Set the text colour to grey if it isn't unlocked yet, or the colour of the button's sprite if it is.
 				nameLabel.label.color = sender.inactive ? Color.grey : self.chatlogSprites[chatlogIndex].color;
 				nameLabel.text = chatlogNames[chatlogIndex];
+
+				if (linearChatlogTracker == null)
+				{
+					return;
+				}
+				// If it's a regular chatlog with a set location, or it's already been collected by the player,
+				// or it's a pre/post-pebbles only chatlog, and the player is in the other bracket.
+				if (!isLinearChatlog || !sender.inactive)
+				{
+					// Don't show the region list.
+					HideChatlogRegionList(self);
+				}
+				else
+				{
+					// Show the region list.
+					ShowChatlogRegionList(self);
+				}
 			}
 
 			// If the clicked button isn't unlocked.
 			if (sender.inactive)
 			{
-				// Remove and reset the text.
+				// Remove and reset the main text.
 				self.ResetLabels();
 				self.labels[0].text = self.Translate("[ Collection Empty ]");
 				self.RefreshLabelPositions();
 				// (Removing it afterwards like this is easier than preventing it from loading in the first place)
 			}
+		}
+
+		private void ShowChatlogRegionList(CollectionsMenu menu)
+		{
+			if (chatlogRegionList != null)
+			{
+				return;
+			}
+
+			Vector2 regionListPos = new(
+				menu.textBoxBorder.pos.x + (menu.textBoxBorder.size.x / 2f),
+				menu.textBoxBorder.pos.y + menu.textBoxBorder.size.y - 60f
+			);
+
+			chatlogRegionList = new(menu, menu.pages[0], regionListPos, new Vector2(380f, 160f), false);
+			chatlogRegionList.pos.x -= chatlogRegionList.size.x / 2f;
+			chatlogRegionList.pos.y -= chatlogRegionList.size.y;
+
+			menu.pages[0].subObjects.Add(chatlogRegionList);
+		}
+
+		private void HideChatlogRegionList(CollectionsMenu menu)
+		{
+			if (chatlogRegionList == null)
+			{
+				return;
+			}
+			chatlogRegionList.RemoveSprites();
+			menu.pages[0].RemoveSubObject(chatlogRegionList);
+			chatlogRegionList = null;
 		}
 	}
 }
