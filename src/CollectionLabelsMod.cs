@@ -6,7 +6,6 @@ using System.Linq;
 using System.Security.Permissions;
 using UnityEngine;
 
-#nullable enable annotations
 #pragma warning disable CS0618
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 #pragma warning restore CS0618
@@ -24,9 +23,7 @@ namespace CollectionLabels
 		// The label displaying the selected entry's name.
 		private MenuLabel nameLabel;
 
-		private ChatlogRegionList? chatlogRegionList;
-
-		private LinearChatlogTracker? linearChatlogTracker;
+		private ChatlogRegionList chatlogRegionList;
 
 		public void OnEnable()
 		{
@@ -61,10 +58,10 @@ namespace CollectionLabels
 				}
 			}
 
-			linearChatlogTracker = LinearChatlogTracker.TryCreateTracker();
-			if (linearChatlogTracker == null)
+			LinearChatlogHelper.Load();
+			if (!LinearChatlogHelper.Loaded)
 			{
-				Debug.Log("something something 'couldn't load so disabling region list'");// TODO
+				Debug.Log("(CollectionLabels) Linear chatlog region list is unavailable.");
 			}
 		}
 
@@ -156,54 +153,13 @@ namespace CollectionLabels
 			// Pearl button or iterator button.
 			if (message.Contains("PEARL") || message.Contains("TYPE"))
 			{
-				// Remove the region list if it's there.
-				HideChatlogRegionList(self);
-
-				DataPearl.AbstractDataPearl.DataPearlType selectedPearl = self.usedPearlTypes[self.selectedPearlInd];
-
-				// Set the label's colour to the pearl's in-game colour (or highlight colour).
-				Color labelColor = DataPearl.UniquePearlMainColor(selectedPearl);
-
-				// Lazy "Is this colour too dark to be used in text" check. (Looking at you SI pearls)
-				if (labelColor.r + labelColor.g + labelColor.b <= 0.3f)
-				{
-					// Try to use the highlight colour instead (if it exists), since those are usually brighter.
-					labelColor = DataPearl.UniquePearlHighLightColor(selectedPearl) ?? labelColor;
-				}
-				nameLabel.label.color = labelColor;
-
-				// Set the label's text based on the selected pearl type.
-				nameLabel.text = pearlNames[self.selectedPearlInd];
+				HandlePearlSingal(self);
 			}
 
 			// Chatlog button.
 			else if (message.Contains("CHATLOG"))
 			{
-				int chatlogIndex = self.chatlogButtons.IndexOf(sender);
-				// The first `prePebsBroadcastChatlogs.Count + postPebsBroadcastChatlogs.Count` number of buttons are assigned
-				// to the grey/white broadcasts, so if the index is within that range it's one of them.
-				bool isLinearChatlog = chatlogIndex <= self.prePebsBroadcastChatlogs.Count + self.postPebsBroadcastChatlogs.Count;
-
-				// Set the text colour to grey if it isn't unlocked yet, or the colour of the button's sprite if it is.
-				nameLabel.label.color = sender.inactive ? Color.grey : self.chatlogSprites[chatlogIndex].color;
-				nameLabel.text = chatlogNames[chatlogIndex];
-
-				if (linearChatlogTracker == null)
-				{
-					return;
-				}
-				// If it's a regular chatlog with a set location, or it's already been collected by the player,
-				// or it's a pre/post-pebbles only chatlog, and the player is in the other bracket.
-				if (!isLinearChatlog || !sender.inactive)
-				{
-					// Don't show the region list.
-					HideChatlogRegionList(self);
-				}
-				else
-				{
-					// Show the region list.
-					ShowChatlogRegionList(self);
-				}
+				HandleChatlogSingal(self, sender);
 			}
 
 			// If the clicked button isn't unlocked.
@@ -217,8 +173,66 @@ namespace CollectionLabels
 			}
 		}
 
-		private void ShowChatlogRegionList(CollectionsMenu menu)
+		private void HandlePearlSingal(CollectionsMenu self)
 		{
+			// Remove the region list if it's there.
+			HideChatlogRegionList(self);
+
+			DataPearl.AbstractDataPearl.DataPearlType selectedPearl = self.usedPearlTypes[self.selectedPearlInd];
+
+			// Set the label's colour to the pearl's in-game colour (or highlight colour).
+			Color labelColor = DataPearl.UniquePearlMainColor(selectedPearl);
+
+			// Lazy "Is this colour too dark to be used in text" check. (Looking at you SI pearls)
+			if (labelColor.r + labelColor.g + labelColor.b <= 0.3f)
+			{
+				// Try to use the highlight colour instead (if it exists), since those are usually brighter.
+				labelColor = DataPearl.UniquePearlHighLightColor(selectedPearl) ?? labelColor;
+			}
+			nameLabel.label.color = labelColor;
+
+			// Set the label's text based on the selected pearl type.
+			nameLabel.text = pearlNames[self.selectedPearlInd];
+		}
+
+		private void HandleChatlogSingal(CollectionsMenu self, MenuObject sender)
+		{
+			int chatlogIndex = self.chatlogButtons.IndexOf(sender);
+			// The first `prePebsBroadcastChatlogs.Count + postPebsBroadcastChatlogs.Count` number of buttons are assigned
+			// to the grey/white broadcasts, so if the index is within that range it's one of them.
+			bool isLinearChatlog = chatlogIndex < self.prePebsBroadcastChatlogs.Count + self.postPebsBroadcastChatlogs.Count;
+
+			// Set the text colour to grey if it isn't unlocked yet, or the colour of the button's sprite if it is.
+			nameLabel.label.color = sender.inactive ? Color.grey : self.chatlogSprites[chatlogIndex].color;
+			nameLabel.text = chatlogNames[chatlogIndex];
+
+			// todo: comment here
+			if (!LinearChatlogHelper.Loaded)
+			{
+				return;
+			}
+			// If it's a regular chatlog with a set location, or it's already been collected by the player, hide/don't show the region list.
+			if (!isLinearChatlog || !sender.inactive)
+			{
+				// Hide the region list.
+				HideChatlogRegionList(self);
+				return;
+			}
+
+			bool selectedLogIsPrePebs = chatlogIndex < self.prePebsBroadcastChatlogs.Count;
+			bool selectedLogIsPostPebs = chatlogIndex >= self.prePebsBroadcastChatlogs.Count;
+
+			// If it's a pre/post-pebbles exclusive chatlog and the player is in the other part of the story, then they can't collect it even if they want to.
+			bool unableToCollect = (LinearChatlogHelper.PlayerIsPostPebbles && selectedLogIsPrePebs) || (!LinearChatlogHelper.PlayerIsPostPebbles && selectedLogIsPostPebs);
+
+			MakeChatlogRegionList(self);
+			// If it's unavailable, disable the region list button.
+			chatlogRegionList.SetUnavailable(unableToCollect);
+		}
+
+		private void MakeChatlogRegionList(CollectionsMenu menu)
+		{
+			// If it's already been made, return.
 			if (chatlogRegionList != null)
 			{
 				return;
@@ -238,6 +252,7 @@ namespace CollectionLabels
 
 		private void HideChatlogRegionList(CollectionsMenu menu)
 		{
+			// If it doesn't actually exist, return.
 			if (chatlogRegionList == null)
 			{
 				return;

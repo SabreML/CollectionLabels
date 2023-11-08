@@ -28,7 +28,7 @@ namespace CollectionLabels
 				description = "Hold to display all regions with broadcast tokens",
 				colorEdge = Color.white
 			};
-			showListButton.OnPressDone += ShowRegionNames;
+			showListButton.OnPressDone += (_) => ShowRegionNames();
 			new UIelementWrapper(menuTabWrapper, showListButton);
 
 			for (int i = 0; i < leftRegionLabels.Length; i++)
@@ -41,9 +41,27 @@ namespace CollectionLabels
 			}
 		}
 
-		private void ShowRegionNames(UIfocusable trigger)
+		public void SetUnavailable(bool on)
 		{
-			string[] regionAcronyms = LinearChatlogTracker.AllChatlogs.Keys.ToArray();
+			showListButton.greyedOut = on;
+			if (on)
+			{
+				showListButton.text = "[UNAVAILABLE]";
+				showListButton._glow.Hide();
+				showListButton.Show();
+				HideRegionNames();
+			}
+			else
+			{
+				showListButton.text = "[SHOW REMAINING BROADCAST LOCATIONS]";
+			}
+		}
+
+		// Fills the region labels with the names of every region that contains linear chatlog collectibles.
+		// Called by the `showListButton`'s `OnPressDone` event.
+		private void ShowRegionNames()
+		{
+			string[] regionAcronyms = LinearChatlogHelper.AllChatlogs.Keys.ToArray();
 
 			int allLabelsLength = AllRegionlabels.Length;
 			if (regionAcronyms.Length > allLabelsLength)
@@ -72,18 +90,29 @@ namespace CollectionLabels
 			RefreshLabelPositions();
 		}
 
+		// Sets the `text` of all region labels to an empty string.
+		// Called by `SetUnavailable()`, when the selected linear chatlog isn't collectable by the player.
+		private void HideRegionNames()
+		{
+			foreach (MenuLabel label in AllRegionlabels)
+			{
+				label.text = "";
+			}
+		}
+
 		private void GetLabelName(MenuLabel label, string regionAcronym)
 		{
 			string fullName = Region.GetRegionFullName(regionAcronym, MoreSlugcatsEnums.SlugcatStatsName.Spear);
 
-			if (LinearChatlogTracker.UncollectedChatlogs.TryGetValue(regionAcronym, out _))
+			// If the region contains uncollected 
+			if (LinearChatlogHelper.UncollectedChatlogs.TryGetValue(regionAcronym, out _))
 			{
-				label.text = "[x] " + fullName;
-				label.label.color = Menu.Menu.MenuRGB(Menu.Menu.MenuColors.DarkGrey);
+				label.text = "[ ] " + fullName;
 			}
 			else
 			{
-				label.text = "[ ] " + fullName;
+				label.text = "[x] " + fullName;
+				label.label.color = Menu.Menu.MenuRGB(Menu.Menu.MenuColors.DarkGrey);
 			}
 		}
 
