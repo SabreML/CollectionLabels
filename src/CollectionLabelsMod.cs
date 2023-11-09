@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace CollectionLabels
 {
-	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", "1.0.1")]
+	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", "1.1.0")]
 	public class CollectionLabelsMod : BaseUnityPlugin
 	{
 		// A list of pearl names/locations. (E.g. "[Shoreline pearl 1]", "[Chimney Canopy pearl]", etc.)
@@ -22,7 +22,7 @@ namespace CollectionLabels
 
 		// The label displaying the selected entry's name.
 		private MenuLabel nameLabel;
-
+		// A UI element that displays a list of regions which still contain a white/grey 'Linear' chatlog.
 		private ChatlogRegionList chatlogRegionList;
 
 		public void OnEnable()
@@ -58,10 +58,12 @@ namespace CollectionLabels
 				}
 			}
 
+			// Try to load the Spearmaster's save data into `LinearChatlogHelper` in order to track white/grey broadcasts.
 			LinearChatlogHelper.Load();
+			// If the load failed. (Usually because there's no SM savegame yet.)
 			if (!LinearChatlogHelper.Loaded)
 			{
-				Debug.Log("(CollectionLabels) Linear chatlog region list is unavailable.");
+				Debug.Log("(CollectionLabels) White/grey chatlog region list is unavailable.");
 			}
 		}
 
@@ -169,7 +171,7 @@ namespace CollectionLabels
 				self.ResetLabels();
 				self.labels[0].text = self.Translate("[ Collection Empty ]");
 				self.RefreshLabelPositions();
-				// (Removing it afterwards like this is easier than preventing it from loading in the first place)
+				// (Removing the pearl/chatlog text afterwards like this is easier than preventing it from loading in the first place)
 			}
 		}
 
@@ -243,7 +245,7 @@ namespace CollectionLabels
 				menu.textBoxBorder.pos.y + menu.textBoxBorder.size.y - 60f
 			);
 
-			chatlogRegionList = new(menu, menu.pages[0], regionListPos, new Vector2(380f, 160f), false);
+			chatlogRegionList = new(menu, menu.pages[0], regionListPos, new Vector2(380f, 125f), false);
 			chatlogRegionList.pos.x -= chatlogRegionList.size.x / 2f;
 			chatlogRegionList.pos.y -= chatlogRegionList.size.y;
 
