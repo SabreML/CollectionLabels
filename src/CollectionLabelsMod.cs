@@ -22,7 +22,7 @@ namespace CollectionLabels
 
 		// The label displaying the selected entry's name.
 		private MenuLabel nameLabel;
-		// A UI element that displays a list of regions which still contain a white/grey 'Linear' chatlog.
+		// A UI element that displays a list of regions which contain a white/grey 'linear' chatlog.
 		private ChatlogRegionList chatlogRegionList;
 
 		public void OnEnable()
@@ -37,7 +37,7 @@ namespace CollectionLabels
 			orig(self, manager);
 
 			// Add `nameLabel` to the menu.
-			float labelX = self.textBoxBorder.pos.x + (self.textBoxBorder.size.x / 2f); // Centered horizontally.
+			float labelX = self.textBoxBorder.pos.x + (self.textBoxBorder.size.x / 2f); // Centred horizontally.
 			float labelY = self.textBoxBorder.pos.y + (self.textBoxBorder.size.y - 30f); // Near the top vertically.
 			nameLabel = new(self, self.pages[0], "", new Vector2(labelX, labelY), Vector2.zero, true);
 			self.pages[0].subObjects.Add(nameLabel);
@@ -72,7 +72,7 @@ namespace CollectionLabels
 			orig(self);
 			// Clean up the UI elements when the menu closes.
 			nameLabel = null;
-			HideChatlogRegionList(self);
+			RemoveChatlogRegionList(self);
 		}
 
 		private void LoadPearlNames(CollectionsMenu self)
@@ -178,7 +178,7 @@ namespace CollectionLabels
 		private void HandlePearlSingal(CollectionsMenu self)
 		{
 			// Remove the region list if it's there.
-			HideChatlogRegionList(self);
+			RemoveChatlogRegionList(self);
 
 			DataPearl.AbstractDataPearl.DataPearlType selectedPearl = self.usedPearlTypes[self.selectedPearlInd];
 
@@ -208,28 +208,39 @@ namespace CollectionLabels
 			nameLabel.label.color = sender.inactive ? Color.grey : self.chatlogSprites[chatlogIndex].color;
 			nameLabel.text = chatlogNames[chatlogIndex];
 
-			// todo: comment here
+			// If `LinearChatlogHelper` couldn't load any Spearmaster save data, nothing past this point would work properly.
 			if (!LinearChatlogHelper.Loaded)
 			{
+				// So just return instead.
 				return;
 			}
-			// If it's a regular chatlog with a set location, or it's already been collected by the player, hide/don't show the region list.
+
+			// If it's a regular chatlog with a set location, or it's already been collected by the player, hide the region list.
 			if (!isLinearChatlog || !sender.inactive)
 			{
-				// Hide the region list.
-				HideChatlogRegionList(self);
+				// Don't show the region list.
+				RemoveChatlogRegionList(self);
 				return;
 			}
+
+			// Create the region list
+			MakeChatlogRegionList(self);
 
 			bool selectedLogIsPrePebs = chatlogIndex < self.prePebsBroadcastChatlogs.Count;
 			bool selectedLogIsPostPebs = chatlogIndex >= self.prePebsBroadcastChatlogs.Count;
 
 			// If it's a pre/post-pebbles exclusive chatlog and the player is in the other part of the story, then they can't collect it even if they want to.
-			bool unableToCollect = (LinearChatlogHelper.PlayerIsPostPebbles && selectedLogIsPrePebs) || (!LinearChatlogHelper.PlayerIsPostPebbles && selectedLogIsPostPebs);
-
-			MakeChatlogRegionList(self);
-			// If it's unavailable, disable the region list button.
-			chatlogRegionList.SetUnavailable(unableToCollect);
+			if ((LinearChatlogHelper.PlayerIsPostPebbles && selectedLogIsPrePebs) || (!LinearChatlogHelper.PlayerIsPostPebbles && selectedLogIsPostPebs))
+			{
+				// Disable the region list, and log the reason just in case anyone gets confused.
+				chatlogRegionList.SetAvailable(false);
+				Debug.Log($"(CollectionLables) Chatlog {chatlogNames[chatlogIndex]} is not able to be collected by the player due to story progression.");
+			}
+			else
+			{
+				// Otherwise, set the list back to its original state.
+				chatlogRegionList.SetAvailable(true);
+			}
 		}
 
 		private void MakeChatlogRegionList(CollectionsMenu menu)
@@ -240,21 +251,24 @@ namespace CollectionLabels
 				return;
 			}
 
+			// Set the region list's initial position to halfway across the collections menu text box, and 60 down from the top of it.
 			Vector2 regionListPos = new(
 				menu.textBoxBorder.pos.x + (menu.textBoxBorder.size.x / 2f),
 				menu.textBoxBorder.pos.y + menu.textBoxBorder.size.y - 60f
 			);
 
+			// Create the list.
 			chatlogRegionList = new(menu, menu.pages[0], regionListPos, new Vector2(380f, 125f), false);
+			// Adjust its position so that the centre of the list is at `regionListPos` rather than the corner.
 			chatlogRegionList.pos.x -= chatlogRegionList.size.x / 2f;
 			chatlogRegionList.pos.y -= chatlogRegionList.size.y;
-
+			// Add it to the collections menu's `subObjects` list.
 			menu.pages[0].subObjects.Add(chatlogRegionList);
 		}
 
-		private void HideChatlogRegionList(CollectionsMenu menu)
+		private void RemoveChatlogRegionList(CollectionsMenu menu)
 		{
-			// If it doesn't actually exist, return.
+			// If it isn't actually there to remove, return.
 			if (chatlogRegionList == null)
 			{
 				return;

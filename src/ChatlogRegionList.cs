@@ -11,6 +11,8 @@ namespace CollectionLabels
 	{
 		// The number of entries in each column of the region list.
 		private const int labelColumnLength = 5;
+		// The default text for the 'available' state of the button.
+		private const string defaultText = "[SHOW REMAINING BROADCAST LOCATIONS]";
 
 		// A button which is used to hide the actual region list until it's held down.
 		// Also used for unavailable chatlogs, greyed out and with its text set to '[UNAVAILABLE]'.
@@ -30,7 +32,7 @@ namespace CollectionLabels
 			this.borderColor = Menu.Menu.MenuColor(Menu.Menu.MenuColors.MediumGrey);
 
 			// Create the hold button inside the region list of the same size and with no position offset, so that it acts as a sort of overlay.
-			showListButton = new(Vector2.zero, size, "[SHOW REMAINING BROADCAST LOCATIONS]", 50f)
+			showListButton = new(Vector2.zero, size, defaultText, 50f)
 			{
 				description = "Hold to display all regions with uncollected broadcast tokens", // Hover text.
 				colorEdge = Color.white
@@ -59,23 +61,23 @@ namespace CollectionLabels
 			allRegionlabels = leftRegionLabels.Concat(rightRegionLabels).ToArray();
 		}
 
-		// Enable or disable the 'unavailable' state of the region list. Used for linear chatlogs that can't be collected by the player.
-		public void SetUnavailable(bool on)
+		// Enable or disable the 'available' state of the region list. Used for linear chatlogs that can't be collected by the player.
+		public void SetAvailable(bool available)
 		{
-			// Set `greyedOut` to the value of `on`, making it so that it can or can't be clicked.
-			showListButton.greyedOut = on;
-			if (on)
+			if (available)
 			{
-				// Hide the region labels, reset the button, and set its text.
-				HideRegionNames();
-				showListButton.text = "[UNAVAILABLE]";
-				showListButton._glow.Hide();
-				showListButton.Show();
+				// Set the button back to normal.
+				showListButton.greyedOut = false;
+				showListButton.text = defaultText;
 			}
 			else
 			{
-				// Set the button back to normal.
-				showListButton.text = "[SHOW REMAINING BROADCAST LOCATIONS]";
+				// Hide the region labels, grey-out, reset, and set the text of the button, and make it visible again.
+				HideRegionNames();
+				showListButton.greyedOut = true;
+				showListButton.text = "[UNAVAILABLE]";
+				showListButton._glow.Hide();
+				showListButton.Show();
 			}
 		}
 
@@ -112,7 +114,7 @@ namespace CollectionLabels
 		}
 
 		// Sets the `text` of all region labels to an empty string.
-		// Called by `SetUnavailable()`, when the selected linear chatlog isn't collectable by the player.
+		// Called by `SetAvailable()`, when the selected linear chatlog isn't collectable by the player.
 		private void HideRegionNames()
 		{
 			foreach (MenuLabel label in allRegionlabels)
