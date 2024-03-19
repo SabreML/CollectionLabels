@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace CollectionLabels
 {
-	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", "1.1.0")]
+	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", "1.1.1")]
 	public class CollectionLabelsMod : BaseUnityPlugin
 	{
 		// A list of pearl names/locations. (E.g. "[Shoreline pearl 1]", "[Chimney Canopy pearl]", etc.)

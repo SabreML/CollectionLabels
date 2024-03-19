@@ -32,9 +32,9 @@ namespace CollectionLabels
 			this.borderColor = Menu.Menu.MenuColor(Menu.Menu.MenuColors.MediumGrey);
 
 			// Create the hold button inside the region list of the same size and with no position offset, so that it acts as a sort of overlay.
-			showListButton = new(Vector2.zero, size, defaultText, 50f)
+			showListButton = new(Vector2.zero, size, defaultText, 100f)
 			{
-				description = "Hold to display all regions with uncollected broadcast tokens", // Hover text.
+				description = "Hold to display the location of all uncollected broadcast tokens", // Hover text.
 				colorEdge = Color.white
 			};
 			// After the button has been held down, (indirectly) call `ShowRegionNames()`.
