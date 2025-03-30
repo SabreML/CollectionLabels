@@ -12,9 +12,11 @@ using UnityEngine;
 
 namespace CollectionLabels
 {
-	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", "1.1.1")]
+	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", VERSION)]
 	public class CollectionLabelsMod : BaseUnityPlugin
 	{
+		public const string VERSION = "1.1.2";
+
 		// A list of pearl names/locations. (E.g. "[Shoreline pearl 1]", "[Chimney Canopy pearl]", etc.)
 		private List<string> pearlNames;
 		// A list of chatlog names/locations. (E.g. "[Sky Islands transmission 2]", "[Garbage Wastes transmission 1]", etc.)

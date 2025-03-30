@@ -47,7 +47,7 @@ namespace CollectionLabels
 		private static void ParseData(DeathPersistentSaveData deathPersistentSaveData, MiscWorldSaveData miscWorldSaveData)
 		{
 			PlayerIsPostPebbles = miscWorldSaveData.SSaiConversationsHad > 0;
-			string[] spearmasterRegions = SlugcatStats.getSlugcatStoryRegions(MoreSlugcatsEnums.SlugcatStatsName.Spear);
+			List<string> spearmasterRegions = SlugcatStats.SlugcatStoryRegions(MoreSlugcatsEnums.SlugcatStatsName.Spear);
 
 			// Make a new dict based on `regionGreyTokens` with only the spearmaster regions, and with all 'unique' (coloured) chatlogs removed.
 			AllChatlogs = RWCustom.Custom.rainWorld.regionGreyTokens
