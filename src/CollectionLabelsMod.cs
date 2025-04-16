@@ -15,7 +15,7 @@ namespace CollectionLabels
 	[BepInPlugin("sabreml.collectionlabels", "CollectionLabels", VERSION)]
 	public class CollectionLabelsMod : BaseUnityPlugin
 	{
-		public const string VERSION = "1.1.2";
+		public const string VERSION = "1.1.3";
 
 		// A list of pearl names/locations. (E.g. "[Shoreline pearl 1]", "[Chimney Canopy pearl]", etc.)
 		private List<string> pearlNames;
